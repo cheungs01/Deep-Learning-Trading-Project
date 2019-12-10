@@ -68,7 +68,7 @@ def generate_trajectory(env, model):
 		state, rwd, done, info = env.step(action) # Uses this action
 		rewards.append(rwd)
 	print("Information:",info)
-	print("Max profit:",env.max_possible_profit())
+	# print("Max profit:",env.max_possible_profit())
 	return states, actions, rewards
 
 

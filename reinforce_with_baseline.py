@@ -31,8 +31,11 @@ class ReinforceWithBaseline(tf.keras.Model):
 		self.hidden_size = 100
 		self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.001) # Optimizer
 		# TODO: Define network parameters and optimizer
-		self.hidden_layer = tf.keras.layers.Dense(self.hidden_size, input_shape=(state_size,), use_bias=True, activation='relu') # Actor layer 1
-		self.output_layer = tf.keras.layers.Dense(num_actions, input_shape=(self.hidden_size,), use_bias=True, activation='softmax') # Actor layer 2
+		self.hidden_layer1 = tf.keras.layers.Dense(self.hidden_size, input_shape=(state_size,), use_bias=True, activation='elu')
+		self.dropout1 = tf.keras.layers.Dropout(rate=0.2)
+		self.hidden_layer2 = tf.keras.layers.Dense(self.hidden_size2, input_shape=(self.hidden_size,), use_bias=True, activation='elu')
+		self.dropout1 = tf.keras.layers.Dropout(rate=0.2)
+		self.output_layer = tf.keras.layers.Dense(num_actions, input_shape=(self.hidden_size2,), use_bias=True, activation='softmax')
 		self.hidden_critic_layer = tf.keras.layers.Dense(self.hidden_size, input_shape=(state_size,), use_bias=True, activation='relu') # Critic layer 1
 		self.output_critic_layer = tf.keras.layers.Dense(1, input_shape=(self.hidden_size,), use_bias=True) # Critic layer 2
 		pass
@@ -50,8 +53,9 @@ class ReinforceWithBaseline(tf.keras.Model):
 		of each state in the episode
 		"""
 		# TODO: implement this!
-		hidden_output = self.hidden_layer(states)
-		return self.output_layer(hidden_output)
+		hidden_output1 = self.hidden_layer1(states)
+		hidden_output2 = self.hidden_layer2(self.dropout1(hidden_output1))
+		return self.output_layer(self.dropout2(hidden_output2))
 		pass
 
 	def value_function(self, states):
