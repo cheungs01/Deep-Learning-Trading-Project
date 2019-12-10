@@ -7,7 +7,17 @@ import numpy as np
 import tensorflow as tf
 from reinforce import Reinforce
 from reinforce_with_baseline import ReinforceWithBaseline
+from DQN import DQN
+import argparse
 
+gpu_available = tf.test.is_gpu_available()
+print("GPU Available: ", gpu_available)
+parser = argparse.ArgumentParser(description='DCGAN')
+parser.add_argument('--device', type=str, default='GPU:0' if gpu_available else 'CPU:0',
+					help='specific the device of computation eg. CPU:0, GPU:0, GPU:1, GPU:2, ... ')
+parser.add_argument('--mode', type=str, default='REINFORCE',
+					help='Can be "REINFORCE" or "REINFORCE_BASELINE" or "DQN"')
+args = parser.parse_args()
 
 def visualize_data(total_rewards):
 	"""
@@ -42,6 +52,7 @@ def discount(rewards, discount_factor=.99):
 	for i in range(len(rewards)-2, -1, -1):
 		discounted_rewards[i]=discount_factor*discounted_rewards[i+1]+rewards[i] # Discounts rewards in future and adds it to present reward
 	return discounted_rewards
+
 def generate_trajectory(env, model):
 	"""
 	Generates lists of states, actions, and rewards for one complete episode.
@@ -71,6 +82,32 @@ def generate_trajectory(env, model):
 	print("Max profit:",env.max_possible_profit())
 	return states, actions, rewards
 
+def train_dqn(env, model, iteration): 
+	epsilon = model.E / (iteration + model.E)
+	state = env.reset()
+	rewards = []
+	done = False
+	info = 1
+	while not done:
+		with tf.GradientTape() as tape: 
+			q_vals = model.call(tf.convert_to_tensor([np.reshape(state,[-1])],dtype=tf.float32))
+			next_action = tf.math.argmax(q_vals, axis=1)
+			if np.random.rand(1) < epsilon:
+				next_action = env.action_space.sample()
+				
+			next_state, reward, done, info = env.step(next_action)
+			next_q_vals = model.call(tf.convert_to_tensor([np.reshape(next_state,[-1])],dtype=tf.float32))
+			rewards.append(reward)
+			loss = model.loss(next_action, q_vals, next_q_vals, reward)
+		gradients = tape.gradient(loss, model.trainable_variables)
+		model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+		state = next_state
+	reward_sum = 0
+	for rwd in rewards: 
+		reward_sum += rwd
+	print("Information:",info)
+	print("Max profit:",env.max_possible_profit())
+	return reward_sum
 
 def train(env, model):
 	"""
@@ -101,30 +138,43 @@ def train(env, model):
 	return reward_sum
 
 def main():
-	if len(sys.argv) != 2 or sys.argv[1] not in {"REINFORCE", "REINFORCE_BASELINE"}:
-		print("USAGE: python assignment.py <Model Type>")
-		print("<Model Type>: [REINFORCE/REINFORCE_BASELINE]")
-		exit()
 
 	env = gym.make("forex-v0") # environment
 	state_size = env.observation_space.shape[0]*env.observation_space.shape[1]
 	num_actions = env.action_space.n
 
 	# Initialize model
-	if sys.argv[1] == "REINFORCE":
+	if args.mode == "REINFORCE":
 		model = Reinforce(state_size, num_actions) 
-	elif sys.argv[1] == "REINFORCE_BASELINE":
+	elif args.mode == "REINFORCE_BASELINE":
 		model = ReinforceWithBaseline(state_size, num_actions)
+	elif args.mode == "DQN": 
+		model = DQN(2)
 
 	# TODO: 
 	# 1) Train your model for 650 episodes, passing in the environment and the agent. 
 	# 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
 	# 3) After training, print the average of the last 50 rewards you've collected.
 	rewards = []
-	for i in range(650):
-		print(i)
-		reward = train(env, model)
-		rewards.append(reward)
+	if args.mode == "REINFORCE" or args.mode == "REINFORCE_BASELINE": 
+		try:
+			with tf.device('/device:' + args.device):
+				for i in range(650):
+					print(i)
+					reward = train(env, model)
+					rewards.append(reward)
+		except RuntimeError as e:
+			print(e)
+	else: 
+		try:
+			with tf.device('/device:' + args.device):
+				print(args.device)
+				for i in range(1000): 
+					print(i)
+					reward = train_dqn(env, model, i)
+					rewards.append(reward)
+		except RuntimeError as e:
+			print(e)
 	print("Average of last 50 rewards:",tf.reduce_mean(rewards[-50:])) # Prints average of final 50 rewards
 	# TODO: Visualize your rewards.
 	visualize_data(rewards)
