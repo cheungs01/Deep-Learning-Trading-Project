@@ -27,7 +27,7 @@ class DQN(tf.keras.Model):
 		self.model.add(Dropout(rate=0.2))
 		self.model.add(Dense(num_actions, activation='softmax', use_bias=True))
 		
-		self.gamma = .9
+		self.gamma = .99
 		self.E = 300
 		self.games = 1000
 		self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.0005) # Optimizer

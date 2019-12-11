@@ -25,6 +25,7 @@ def visualize_data_rewards(total_rewards, runtype):
 
 	:param rewards: List of rewards from all episodes
 	"""
+	pylab.figure(0)
 	x_values = pylab.arange(0, len(total_rewards), 1)
 	y_values = total_rewards
 	pylab.plot(x_values, y_values)
@@ -40,8 +41,9 @@ def visualize_data_profits(total_profits, runtype):
 
 	:param rewards: List of rewards from all episodes
 	"""
-	x_values = pylab.arange(0, len(total_rewards), 1)
-	y_values = total_rewards
+	pylab.figure(1)
+	x_values = pylab.arange(0, len(total_profits), 1)
+	y_values = total_profits
 	pylab.plot(x_values, y_values)
 	pylab.xlabel('episodes')
 	pylab.ylabel('cumulative profits')
@@ -121,7 +123,7 @@ def train_dqn(env, model, iteration):
 		reward_sum += rwd
 	print("Information:",info)
 	print("Max profit:",env.max_possible_profit())
-	return reward_sum, info.total_profit
+	return reward_sum, info["total_profit"]
 
 def random_call(env): 
 	state = env.reset()
@@ -138,7 +140,7 @@ def random_call(env):
 		reward_sum += rwd
 	print("Information:",info)
 	print("Max profit:",env.max_possible_profit())
-	return reward_sum, info.total_profit
+	return reward_sum, info["total_profit"]
 	
 
 def train(env, model):
@@ -167,7 +169,7 @@ def train(env, model):
 	reward_sum = 0
 	for i in rewards:
 		reward_sum+=i # Adds rewards
-	return reward_sum, info.total_profit
+	return reward_sum, info["total_profit"]
 
 def main():
 
@@ -182,6 +184,8 @@ def main():
 		model = ReinforceWithBaseline(state_size, num_actions)
 	elif args.mode == "DQN": 
 		model = DQN(2)
+	elif args.mode == "RANDOM": 
+		pass
 
 	# TODO: 
 	# 1) Train your model for 650 episodes, passing in the environment and the agent. 
@@ -199,7 +203,7 @@ def main():
 					profits.append(profit)
 		except RuntimeError as e:
 			print(e)
-	else if args.mode == "DQN":
+	elif args.mode == "DQN":
 		try:
 			with tf.device('/device:' + args.device):
 				print(args.device)
